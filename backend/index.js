@@ -13,7 +13,6 @@ const PORT = 3001;
 
 const whitelist = [
   'http://localhost:5173',
-  'https://shopdienthoai-nine.vercel.app',
 ];
 const isAllowedOrigin = (origin) => {
   if (!origin) return true; // Postman/cURL
