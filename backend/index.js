@@ -13,16 +13,16 @@ const PORT = 3001;
 
 const whitelist = [
   'http://localhost:5173',
+  'https://myphonedp1.vercel.app/',
 ];
 const isAllowedOrigin = (origin) => {
-  if (!origin) return true; // Postman/cURL
+  if (!origin) return true;
   if (whitelist.includes(origin)) return true;
-  try {
-    const u = new URL(origin);
-    if (u.hostname.endsWith('.vercel.app')) return true; // preview
-  } catch {}
+  try { const u = new URL(origin); if (u.hostname.endsWith('.vercel.app')) return true; } catch {}
   return false;
 };
+app.use(cors({ origin(o, cb){ isAllowedOrigin(o) ? cb(null,true) : cb(new Error('Not allowed by CORS')); }, credentials:true }));
+
 const corsOptions = {
   origin(origin, cb) {
     return isAllowedOrigin(origin) ? cb(null, true) : cb(new Error('Not allowed by CORS'));
@@ -30,7 +30,7 @@ const corsOptions = {
   credentials: true,
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
 };
-app.use(cors(corsOptions));
+app.use(cors({ origin(o, cb){ isAllowedOrigin(o) ? cb(null,true) : cb(new Error('Not allowed by CORS')); }, credentials:true }));
 
 
 app.use(cors(corsOptions));
@@ -1219,10 +1219,12 @@ app.put('/api/products/:id/extended', (req, res) => {
 
 
 
-// Cuối file:
+
 if (!process.env.VERCEL) {
-  app.listen(PORT, () => console.log(`API listening on http://localhost:${PORT}`));
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, () => console.log('API local http://localhost:' + PORT));
 }
-module.exports = app; // (CommonJS)
+module.exports = app;
+
 
 // Backend (index.js)
