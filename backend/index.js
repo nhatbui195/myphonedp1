@@ -1082,7 +1082,7 @@ app.get('/api/stores', (req, res) => {
  * CRON – Tự động xác nhận đơn sau 12 giờ
  * Chạy mỗi giờ: đơn "Chờ xác nhận" đủ 12h và chưa yêu cầu hủy → "Đã xác nhận"
  * ========================================= */
-cron.schedule('0 * * * *', () => { // Chạy đầu mỗi giờ
+app.post('/api/cron/auto-confirm', (req, res) => {
   const sql = `
     UPDATE donhang
     SET TrangThai = 'Đã xác nhận', UpdatedAt = NOW()
@@ -1091,11 +1091,8 @@ cron.schedule('0 * * * *', () => { // Chạy đầu mỗi giờ
       AND COALESCE(YeuCauHuy, 0) = 0
   `;
   db.query(sql, (err, result) => {
-    if (err) {
-      console.error('❌ Lỗi CRON auto-confirm:', err);
-    } else if (result?.affectedRows > 0) {
-      console.log(`✅ CRON: tự xác nhận ${result.affectedRows} đơn hàng.`);
-    }
+    if (err) return res.status(500).json({ ok: false, error: err.message });
+    res.json({ ok: true, affected: result?.affectedRows || 0 });
   });
 });
 /* =========================================
