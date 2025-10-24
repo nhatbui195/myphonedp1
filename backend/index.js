@@ -7,6 +7,7 @@ const mysql = require('mysql2');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
+const bcrypt = require('bcrypt'); 
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -15,6 +16,7 @@ const PORT = process.env.PORT || 3001;
 const WHITELIST = [
   'http://localhost:5173',
   'https://myphonedp1.vercel.app',
+  'https://shopstorent.vercel.app',   // 👈 thêm domain thật đang chạy FE
 ];
 const isAllowedOrigin = (origin) => {
   if (!origin) return true; // Postman/cURL
@@ -1246,7 +1248,12 @@ app.put('/api/products/:id/extended', (req, res) => {
   });
 });
 
-
+if (!process.env.VERCEL) {
+  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+} else {
+  // Vercel: file được lưu ở /tmp, cho phép đọc công khai
+  app.use('/uploads', express.static('/tmp'));
+}
 
 if (!process.env.VERCEL) {
   app.listen(PORT, () => console.log(`API local http://localhost:${PORT}`));

@@ -6,13 +6,16 @@ import BreadcrumbBar from "../components/BreadcrumbBar";
 import { api } from "../api/client";
 void motion;
 /* ============== Helpers ============== */
-const baseURL = api?.defaults?.baseURL?.replace(/\/+$/, "") || "";
- const safeImage = (src) => {
-   if (!src) return "";
-   if (/^(https?:|blob:|data:)/i.test(src)) return src;
-   const path = String(src).startsWith("/") ? src : `/${src}`;
-   return `${baseURL}${path}`;
- };
+const BASE = (api?.defaults?.baseURL || "").replace(/\/+$/, "");
+const safeImage = (src) => {
+  if (!src) return "";
+  if (/^(https?:|blob:|data:)/i.test(src)) return src;
+  let path = String(src).trim();
+  // Nếu chỉ là tên file (không có dấu /), mặc định nằm trong /uploads/
+  if (!path.includes("/")) path = `/uploads/${path}`;
+  if (!path.startsWith("/")) path = `/${path}`;
+  return `${BASE}${path}`;
+};
 const getId = (p) => p?.MaSanPham ?? p?.id ?? p?.ID ?? String(Math.random());
 const getPrice = (p) => Number(p?.DonGia ?? p?.GiaBan ?? 0) || 0;
 const nameOf = (p) => String(p?.TenSanPham || p?.name || "");

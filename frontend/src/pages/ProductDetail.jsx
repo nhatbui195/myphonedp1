@@ -16,7 +16,11 @@ const safeImage = (src) => {
    if (!src) return "";
    if (/^(https?:|blob:|data:)/i.test(src)) return src;
    const base = (api?.defaults?.baseURL || "").replace(/\/+$/, "");
-   const path = String(src).startsWith("/") ? src : `/${src}`;
+   let path = String(src).trim();
+   // Nếu chỉ là tên file (không có slash), thêm /uploads/
+   if (!path.includes("/")) path = `/uploads/${path}`;
+   // Bảo đảm có dấu / đầu
+   if (!path.startsWith("/")) path = `/${path}`;
    return `${base}${path}`;
  };
 const getId    = (p) => p?.MaSanPham ?? p?.id ?? p?.ID ?? "";

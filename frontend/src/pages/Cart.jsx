@@ -5,9 +5,23 @@ import Swal from "sweetalert2";
 import "../styles/pages/Cart.css";
 import TopBar from "../components/TopBar";
 import { readCart, writeCart, clearCart, readUser } from "../utils/cart"; // ✅ cart per-user
+import { api } from "../api/client"; // ✅ dùng baseURL từ api client
 
 const fmtVND = (n) =>
   (Number(n) || 0).toLocaleString("vi-VN", { style: "currency", currency: "VND" });
+
+/* ========= Image helper (đồng bộ với các trang khác) ========= */
+const BASE = (api?.defaults?.baseURL || "").replace(/\/+$/, "");
+const safeImage = (src) => {
+  if (!src) return "";
+  if (/^(https?:|blob:|data:)/i.test(src)) return src;
+  let path = String(src).trim();
+  // Nếu chỉ là tên file (không có dấu /), mặc định nằm trong /uploads/
+  if (!path.includes("/")) path = `/uploads/${path}`;
+  // Bảo đảm có dấu / đầu
+  if (!path.startsWith("/")) path = `/${path}`;
+  return `${BASE}${path}`;
+};
 
 /* ========= Helpers ========= */
 function countCart(items) {
@@ -25,7 +39,11 @@ function rowKey(it, idx) {
 function isLoggedIn() {
   const u = readUser();
   const token = (() => {
-    try { return localStorage.getItem("token"); } catch { return null; }
+    try {
+      return localStorage.getItem("token");
+    } catch {
+      return null;
+    }
   })();
   const maKhachHang = u?.MaTaiKhoan ?? u?.MaKhachHang ?? null;
   return !!(maKhachHang || token);
@@ -36,7 +54,9 @@ export default function Cart() {
   const [items, setItems] = useState(() => readCart());
 
   useEffect(() => {
-    const onStorage = (e) => { if (e?.key?.startsWith?.("cart::")) setItems(readCart()); };
+    const onStorage = (e) => {
+      if (e?.key?.startsWith?.("cart::")) setItems(readCart());
+    };
     const onUpdated = (e) => setItems(e?.detail?.items || readCart());
     const onAuthChanged = () => setItems(readCart());
 
@@ -53,64 +73,96 @@ export default function Cart() {
   const totalQty = useMemo(() => countCart(items), [items]);
   const totalPrice = useMemo(() => totalCart(items), [items]);
 
-  const save = useCallback((next) => { setItems(next); writeCart(next); }, []);
+  const save = useCallback((next) => {
+    setItems(next);
+    writeCart(next);
+  }, []);
 
-  const updateQty = useCallback((key, nextQty) => {
-    const q = Math.max(1, Number(nextQty) || 1);
-    const next = items.map((it, idx) =>
-      rowKey(it, idx) === key ? { ...it, qty: q } : it
-    );
-    save(next);
-  }, [items, save]);
-
-  const inc = useCallback((key) => {
-    const next = items.map((it, idx) =>
-      rowKey(it, idx) === key ? { ...it, qty: Math.max(1, Number(it.qty || 0) + 1) } : it
-    );
-    save(next);
-  }, [items, save]);
-
-  const dec = useCallback((key) => {
-    const next = items.map((it, idx) =>
-      rowKey(it, idx) === key ? { ...it, qty: Math.max(1, Number(it.qty || 0) - 1) } : it
-    );
-    save(next);
-  }, [items, save]);
-
-  const removeOne = useCallback(async (key) => {
-    const res = await Swal.fire({
-      title: "Xóa sản phẩm?",
-      text: "Bạn chắc chắn muốn xóa sản phẩm này khỏi giỏ?",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Xóa",
-      cancelButtonText: "Hủy",
-      reverseButtons: true
-    });
-    if (res.isConfirmed) {
-      const next = items.filter((it, idx) => rowKey(it, idx) !== key);
+  const updateQty = useCallback(
+    (key, nextQty) => {
+      const q = Math.max(1, Number(nextQty) || 1);
+      const next = items.map((it, idx) =>
+        rowKey(it, idx) === key ? { ...it, qty: q } : it
+      );
       save(next);
-      Swal.fire({ icon: "success", title: "Đã xóa", timer: 800, showConfirmButton: false });
-    }
-  }, [items, save]);
+    },
+    [items, save]
+  );
 
-  const clearAll = useCallback(async () => {
-    if (!items.length) return;
-    const res = await Swal.fire({
-      title: "Xóa tất cả?",
-      text: "Giỏ hàng sẽ trống hoàn toàn.",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Xóa tất cả",
-      cancelButtonText: "Hủy",
-      reverseButtons: true
-    });
-    if (res.isConfirmed) {
-      setItems([]);
-      clearCart();
-      Swal.fire({ icon: "success", title: "Đã xóa tất cả", timer: 900, showConfirmButton: false });
-    }
-  }, [items]);
+  const inc = useCallback(
+    (key) => {
+      const next = items.map((it, idx) =>
+        rowKey(it, idx) === key
+          ? { ...it, qty: Math.max(1, Number(it.qty || 0) + 1) }
+          : it
+      );
+      save(next);
+    },
+    [items, save]
+  );
+
+  const dec = useCallback(
+    (key) => {
+      const next = items.map((it, idx) =>
+        rowKey(it, idx) === key
+          ? { ...it, qty: Math.max(1, Number(it.qty || 0) - 1) }
+          : it
+      );
+      save(next);
+    },
+    [items, save]
+  );
+
+  const removeOne = useCallback(
+    async (key) => {
+      const res = await Swal.fire({
+        title: "Xóa sản phẩm?",
+        text: "Bạn chắc chắn muốn xóa sản phẩm này khỏi giỏ?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Xóa",
+        cancelButtonText: "Hủy",
+        reverseButtons: true,
+      });
+      if (res.isConfirmed) {
+        const next = items.filter((it, idx) => rowKey(it, idx) !== key);
+        save(next);
+        Swal.fire({
+          icon: "success",
+          title: "Đã xóa",
+          timer: 800,
+          showConfirmButton: false,
+        });
+      }
+    },
+    [items, save]
+  );
+
+  const clearAll = useCallback(
+    async () => {
+      if (!items.length) return;
+      const res = await Swal.fire({
+        title: "Xóa tất cả?",
+        text: "Giỏ hàng sẽ trống hoàn toàn.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Xóa tất cả",
+        cancelButtonText: "Hủy",
+        reverseButtons: true,
+      });
+      if (res.isConfirmed) {
+        setItems([]);
+        clearCart();
+        Swal.fire({
+          icon: "success",
+          title: "Đã xóa tất cả",
+          timer: 900,
+          showConfirmButton: false,
+        });
+      }
+    },
+    [items]
+  );
 
   // ✅ SPA: điều hướng sang /payment, truyền tổng tiền qua query
   const goCheckout = useCallback(async () => {
@@ -121,12 +173,13 @@ export default function Cart() {
         text: "Vui lòng đăng nhập để tiếp tục thanh toán.",
         confirmButtonText: "Đăng nhập",
         showCancelButton: true,
-        cancelButtonText: "Hủy"
+        cancelButtonText: "Hủy",
       });
-      if (r.isConfirmed) window.dispatchEvent(new CustomEvent("OPEN_LOGIN_MODAL"));
+      if (r.isConfirmed)
+        window.dispatchEvent(new CustomEvent("OPEN_LOGIN_MODAL"));
       return;
     }
-    // Nếu anh muốn tạo đơn hàng trước rồi thanh toán thì điều hướng kèm orderId thay vì amount.
+    // Nếu muốn tạo đơn trước rồi thanh toán thì điều hướng kèm orderId thay vì amount.
     navigate(`/payment?amount=${encodeURIComponent(totalPrice || 0)}`);
   }, [navigate, totalPrice]);
 
@@ -157,12 +210,22 @@ export default function Cart() {
                 return (
                   <div className="cart__row" key={key}>
                     <div className="cart__prod">
-                      <img className="cart__thumb" src={it.image} alt={it.name} />
+                      <img
+                        className="cart__thumb"
+                        src={safeImage(it.image)}
+                        alt={it.name}
+                        loading="lazy"
+                      />
                       <div className="cart__meta">
-                        <div className="cart__name" title={it.name}>{it.name}</div>
-                        <div className="cart__variant">{it.color || ""} {it.capacity || ""}</div>
+                        <div className="cart__name" title={it.name}>
+                          {it.name}
+                        </div>
+                        <div className="cart__variant">
+                          {it.color || ""} {it.capacity || ""}
+                        </div>
                         <div className="cart__line-total">
-                          Thành tiền: <b>{fmtVND((it.price || 0) * (it.qty || 0))}</b>
+                          Thành tiền:{" "}
+                          <b>{fmtVND((it.price || 0) * (it.qty || 0))}</b>
                         </div>
                       </div>
                     </div>
@@ -170,7 +233,14 @@ export default function Cart() {
                     <div className="cart__price">{fmtVND(it.price)}</div>
 
                     <div className="cart__qty">
-                      <button type="button" className="qty-btn" onClick={() => dec(key)} aria-label="Giảm số lượng">-</button>
+                      <button
+                        type="button"
+                        className="qty-btn"
+                        onClick={() => dec(key)}
+                        aria-label="Giảm số lượng"
+                      >
+                        -
+                      </button>
                       <input
                         className="qty-input"
                         value={it.qty}
@@ -181,16 +251,36 @@ export default function Cart() {
                           updateQty(key, v || 1);
                         }}
                         onKeyDown={(e) => {
-                          if (e.key === "ArrowUp") { e.preventDefault(); inc(key); }
-                          if (e.key === "ArrowDown") { e.preventDefault(); dec(key); }
+                          if (e.key === "ArrowUp") {
+                            e.preventDefault();
+                            inc(key);
+                          }
+                          if (e.key === "ArrowDown") {
+                            e.preventDefault();
+                            dec(key);
+                          }
                         }}
                         aria-label="Số lượng"
                       />
-                      <button type="button" className="qty-btn" onClick={() => inc(key)} aria-label="Tăng số lượng">+</button>
+                      <button
+                        type="button"
+                        className="qty-btn"
+                        onClick={() => inc(key)}
+                        aria-label="Tăng số lượng"
+                      >
+                        +
+                      </button>
                     </div>
 
                     <div className="cart__remove">
-                      <button type="button" className="icon-btn" onClick={() => removeOne(key)} title="Xóa sản phẩm">✕</button>
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        onClick={() => removeOne(key)}
+                        title="Xóa sản phẩm"
+                      >
+                        ✕
+                      </button>
                     </div>
                   </div>
                 );
@@ -198,7 +288,13 @@ export default function Cart() {
             </div>
 
             <div className="cart__footer">
-              <button type="button" className="btn btn--outline danger" onClick={clearAll}>Xóa tất cả</button>
+              <button
+                type="button"
+                className="btn btn--outline danger"
+                onClick={clearAll}
+              >
+                Xóa tất cả
+              </button>
               <div className="cart__count muted">{totalQty} sản phẩm</div>
             </div>
           </div>
@@ -220,7 +316,10 @@ export default function Cart() {
               <b>{fmtVND(totalPrice)}</b>
             </div>
 
-            <button className="btn btn--primary summary__cta" onClick={goCheckout}>
+            <button
+              className="btn btn--primary summary__cta"
+              onClick={goCheckout}
+            >
               Tiến hành thanh toán
             </button>
           </aside>
@@ -235,8 +334,12 @@ function EmptyCart() {
   return (
     <div className="cart-empty">
       <div className="cart-empty__title">Giỏ hàng trống</div>
-      <div className="cart-empty__desc">Hãy thêm sản phẩm vào giỏ để tiếp tục mua sắm.</div>
-      <a href="/" className="btn btn--dark">Tiếp tục mua sắm</a>
+      <div className="cart-empty__desc">
+        Hãy thêm sản phẩm vào giỏ để tiếp tục mua sắm.
+      </div>
+      <a href="/" className="btn btn--dark">
+        Tiếp tục mua sắm
+      </a>
     </div>
   );
 }
