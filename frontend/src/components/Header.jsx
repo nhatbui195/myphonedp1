@@ -3,8 +3,9 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import "../styles/components/Header.css";
 import AuthModal from "./AuthModal";
+import { api } from "../api/client";
 
-const API = "http://localhost:3001";
+
 
 function readUser() { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } }
 function getUsername(u) {
@@ -74,18 +75,14 @@ const positionPanel = useCallback(() => {
 
   // API gợi ý (debounce)
   const fetchSuggest = useCallback(async (text) => {
-    if (!text) { setSuggestions([]); return; }
-    try {
-      const url = `${API}/api/suggestions?keyword=${encodeURIComponent(text)}`;
-      const res = await fetch(url, { credentials: "include" });
-      if (res.ok) {
-        const data = await res.json();
-        setSuggestions(Array.isArray(data) ? data : []);
-      }
-    } catch (err) {
-      if (import.meta.env?.DEV) console.debug("suggestions error:", err);
-    }
-  }, []);
+  if (!text) { setSuggestions([]); return; }
+  try {
+    const res = await api.get("/api/suggestions", { params: { keyword: text } });
+    setSuggestions(Array.isArray(res.data) ? res.data : []);
+  } catch (err) {
+    if (import.meta.env?.DEV) console.debug("suggestions error:", err);
+  }
+}, []);
 
   const onChangeKw = (e) => {
     const v = e.target.value;

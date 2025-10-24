@@ -1,19 +1,24 @@
 // src/pages/ProductDetail.jsx
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
 import TopBar from "../components/TopBar";
 import "../styles/pages/ProductDetail.css";
 import OrderSheet from "./OrderSheet.jsx"; // ✅ gọi OrderSheet để đặt hàng
 import Swal from "sweetalert2";
 import { upsertCartItem } from "../utils/cart";
 import { Link } from "react-router-dom";
+import { api } from "../api/client";
 
 
-const API = "http://localhost:3001";
 
 /* ================= Helpers ================= */
-const safeImage = (src) => (src && src.startsWith("http") ? src : `${API}${src || ""}`);
+const safeImage = (src) => {
+   if (!src) return "";
+   if (/^(https?:|blob:|data:)/i.test(src)) return src;
+   const base = (api?.defaults?.baseURL || "").replace(/\/+$/, "");
+   const path = String(src).startsWith("/") ? src : `/${src}`;
+   return `${base}${path}`;
+ };
 const getId    = (p) => p?.MaSanPham ?? p?.id ?? p?.ID ?? "";
 const getName  = (p) => p?.TenSanPham ?? p?.name ?? "Sản phẩm";
 const getPrice = (p) => Number(p?.DonGia ?? p?.GiaBan ?? p?.price ?? 0) || 0;
@@ -110,14 +115,14 @@ export default function ProductDetail() {
 
     const ctrl = new AbortController();
 
-    axios
-      .get(`${API}/api/products/${id}`, { signal: ctrl.signal })
+   api
+      .get(`/api/products/${id}`, { signal: ctrl.signal })
       .then((res) => setProd(res.data || {}))
       .catch((e) => {
         if (e.name !== "CanceledError") console.error("Load product error:", e);
       });
 
-    axios.get(`${API}/api/stores`).then((r) => setStores(r.data || [])).catch(() => {});
+    api.get(`/api/stores`).then((r) => setStores(r.data || [])).catch(() => {});
 
     return () => ctrl.abort();
   }, [id]);
@@ -126,18 +131,18 @@ export default function ProductDetail() {
   useEffect(() => {
     if (!id) return;
 
-    axios
-      .get(`${API}/api/chitietsanpham/${id}`)
+   api
+      .get(`/api/chitietsanpham/${id}`)
       .then((r) => setSpecs(r.data || null))
       .catch(() => setSpecs(null));
 
-    axios
-      .get(`${API}/api/products/${id}/variants`)
+     api
+      .get(`/api/products/${id}/variants`)
       .then((r) => setVariants(Array.isArray(r.data) ? r.data : []))
       .catch(() => setVariants([]));
 
-    axios
-      .get(`${API}/api/products/${id}/extended`)
+   api
+      .get(`/api/products/${id}/extended`)
       .then((r) => {
         const data = r.data || {};
         const cmsObj = {

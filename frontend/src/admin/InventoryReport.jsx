@@ -1,10 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from "recharts";
+import { api } from "../api/client";
 
-const API = "http://localhost:3001";
 
 export default function InventoryReport() {
   const [products, setProducts] = useState([]); // [{ TenSanPham, SoLuongTon, NhaCungCap }]
@@ -15,7 +14,7 @@ export default function InventoryReport() {
     (async () => {
       setLoading(true);
       try {
-        const res = await axios.get(`${API}/api/admin/reports/inventory`);
+        const res = await api.get(`/api/admin/reports/inventory`);
         const rows = (res.data || []).map(p => ({
           name: p.TenSanPham || p.tenSanPham || p.Name || p.name,
           stock: Number(p.SoLuongTon ?? p.soLuongTon ?? p.Stock ?? p.stock ?? 0),

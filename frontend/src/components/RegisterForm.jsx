@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import axios from "axios";
 import "../styles/components/LoginForm.css";
 import "../styles/components/ToastMini.css";
+import { api } from "../api/client";
 
 export default function RegisterForm({ onSwitchToLogin }) {
   const [username, setUsername] = useState("");
@@ -25,7 +25,7 @@ export default function RegisterForm({ onSwitchToLogin }) {
       return;
     }
     try {
-      const res = await axios.post("http://localhost:3001/api/register", { username, password });
+       const res = await api.post("/api/register", { username, password, role: "KhachHang" });
       showToast("success", (res.data?.message || "Đăng ký thành công") + (res.data?.id ? ` (ID: ${res.data.id})` : ""));
       setUsername("");
       setPassword("");
@@ -34,8 +34,8 @@ export default function RegisterForm({ onSwitchToLogin }) {
       // Gợi ý chuyển về màn đăng nhập sau khi đăng ký ok
       setTimeout(() => onSwitchToLogin?.(), 800);
 
-    } catch (err) {
-      showToast("error", err.response?.data?.message || "Đăng ký thất bại");
+    }   catch (err) {
++      showToast("error", err?.response?.data?.message || "Đăng ký thất bại");
     }
   };
 

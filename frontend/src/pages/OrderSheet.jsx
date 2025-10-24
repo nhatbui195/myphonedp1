@@ -1,12 +1,11 @@
 // src/pages/OrderSheet.jsx
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
-import axios from "axios";
 import Swal from "sweetalert2";
 import "../styles/pages/OrderSheet.css";
 import { upsertCartItem } from "../utils/cart";
+import { api } from "../api/client";
 
-const API = "http://localhost:3001";
 const fmtVND = (n) =>
   (Number(n) || 0).toLocaleString("vi-VN", { style: "currency", currency: "VND" });
 
@@ -300,7 +299,7 @@ export default function OrderSheet({
 
     try {
       setSubmitting(true);
-      const res = await axios.post(`${API}/api/donhang`, payload);
+       const res = await api.post("/api/donhang", payload);
       const maDonHang = res?.data?.MaDonHang;
 
       const r = await Swal.fire({

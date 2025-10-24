@@ -1,16 +1,21 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import axios from "axios";
 import Swal from "sweetalert2";
 import "../styles/pages/Search.css";
+import { api } from "../api/client";
 
-const API = "http://localhost:3001";
 
 /* ===== Helpers ===== */
 const fmtVND = (n) =>
   (Number(n) || 0).toLocaleString("vi-VN", { style: "currency", currency: "VND" });
 
-const safeImage = (src) => (src && src.startsWith("http") ? src : `${API}${src || ""}`);
+const safeImage = (src) => {
+   if (!src) return "";
+   if (/^(https?:|blob:|data:)/i.test(src)) return src;
+   const base = (api?.defaults?.baseURL || "").replace(/\/+$/, "");
+   const path = String(src).startsWith("/") ? src : `/${src}`;
+   return `${base}${path}`;
+};
 
 /* ===== Result Card (compact) ===== */
 function ResultCard({ p, onClick }) {
@@ -55,7 +60,7 @@ export default function Search() {
     requestedKwRef.current = kw;
     setLoading(true);
     try {
-      const res = await axios.get(`${API}/api/products`, { params: { search: kw } });
+      const res = await api.get("/api/products", { params: { search: kw } });
       const data = Array.isArray(res.data) ? res.data : [];
 
       const normalized = data.map((p) => {

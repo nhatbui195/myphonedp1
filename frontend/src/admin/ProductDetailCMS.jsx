@@ -1,11 +1,9 @@
 // src/admin/ProductCMS.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import Swal from "sweetalert2";
 import "../styles/admin/ProductCMS.css";
 
-const API = "http://localhost:3001";
-
+import { api } from "../api/client";
 /* ===== Helpers ===== */
 const fmtVND = (n) =>
   (Number(n) || 0).toLocaleString("vi-VN", { style: "currency", currency: "VND" });
@@ -31,7 +29,7 @@ export default function ProductCMS() {
     const run = async () => {
       setLoading(true);
       try {
-        const res = await axios.get(`${API}/api/products`);
+        const res = await api.get(`/api/products`);
         setProducts(Array.isArray(res.data) ? res.data : []);
       } catch (e) {
         console.error(e);
@@ -58,7 +56,7 @@ export default function ProductCMS() {
   const pickProduct = async (p) => {
     setSelected(p);
     try {
-      const res = await axios.get(`${API}/api/products/${getId(p)}/extended`);
+      const res = await api.get(`/api/products/${getId(p)}/extended`);
       const { infos = [], topics = [], faqs = [] } = res.data || {};
       setInfos(infos);
       setTopics(topics);
@@ -82,11 +80,7 @@ export default function ProductCMS() {
     if (!selected) return;
     setSaving(true);
     try {
-      await axios.put(`${API}/api/products/${getId(selected)}/extended`, {
-        infos,
-        topics,
-        faqs,
-      });
+      await api.put(`/api/products/${getId(selected)}/extended`, { infos, topics, faqs });
       Swal.fire("Thành công", "Đã lưu nội dung CMS cho sản phẩm", "success");
     } catch (e) {
       console.error(e);

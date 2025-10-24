@@ -1,12 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import { api } from "../api/client";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line
 } from "recharts";
 
-const API = "http://localhost:3001";
-
+ const API = import.meta.env.VITE_API_BASE || "";
 export default function RevenueReport() {
   const [range, setRange] = useState({
     from: new Date(new Date().getFullYear(), 0, 1), // 1/1 năm nay
@@ -25,7 +24,7 @@ export default function RevenueReport() {
     (async () => {
       setLoading(true);
       try {
-        const res = await axios.get(`${API}/api/admin/reports/revenue`, {
+      const res = await api.get("/api/admin/reports/revenue", {
           params: { from: query.f, to: query.t }
         });
         // Chuẩn hoá field trả về

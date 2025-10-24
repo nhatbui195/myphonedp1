@@ -1,7 +1,7 @@
 // src/components/LoginForm.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { api } from "../api/client";
 import "../styles/components/LoginForm.css";
 import "../styles/components/ToastMini.css";
 import { migrateGuestCartToUser } from "../utils/cart"; // ✅ thêm import
@@ -49,7 +49,7 @@ export default function LoginForm({ onSwitchToRegister, onLoginSuccess }) {
     try {
       setLoading(true);
 
-      const res = await axios.post("http://localhost:3001/api/login", {
+        const res = await api.post("/api/login", {
         username,
         password,
       });
@@ -72,8 +72,9 @@ export default function LoginForm({ onSwitchToRegister, onLoginSuccess }) {
       // Lưu & set headers
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
-      axios.defaults.headers.common["X-User-Role"] = user.role || "";
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+
+      api.defaults.headers.common["X-User-Role"] = user.role || "";
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
       // ✅ Gộp giỏ của khách vào giỏ tài khoản vừa đăng nhập
       migrateGuestCartToUser();

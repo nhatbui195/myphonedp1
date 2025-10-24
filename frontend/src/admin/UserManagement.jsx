@@ -1,23 +1,23 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import Swal from "sweetalert2";
 import "../styles/admin/UserManagement.css";
 
-const API = "http://localhost:3001";
-
+import { api } from "../api/client";
 export default function UserManagement() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const currentUserId = (() => {
-    try { return JSON.parse(localStorage.getItem("user"))?.id || null; }
-    catch { return null; }
-  })();
+   const currentUserId = (() => {
+   try {
+     const u = JSON.parse(localStorage.getItem("user"));
+     return u?.MaTaiKhoan ?? u?.id ?? null;
+   } catch { return null; }
+ })();
 
   const load = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API}/api/users`);
+      const res = await api.get(`/api/users`);
       setUsers(res.data || []);
     } catch (err) {
       console.error("Load users error:", err);
@@ -49,7 +49,7 @@ export default function UserManagement() {
     Swal.fire({ title: "Đang xóa...", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
     try {
-      await axios.delete(`${API}/api/users/${id}`);
+      await api.delete(`/api/users/${id}`)
       await load();
       Swal.fire({ icon: "success", title: "Đã xóa người dùng", timer: 900, showConfirmButton: false });
     } catch (err) {

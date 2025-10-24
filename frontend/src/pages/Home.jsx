@@ -6,17 +6,23 @@ import React, {
   useState,
   useCallback,
 } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import SidebarMenu from "../components/SidebarMenu";
 import "../styles/pages/Home.css";
+import { api } from "../api/client";
 
-const API = "http://localhost:3001";
+
 
 /* ================= Helpers ================= */
 // CHANGED: bỏ random để key/link ổn định
 const getId = (p) => p?.MaSanPham ?? p?.id ?? p?.ID ?? null;
-const safeImage = (src) => (src && src.startsWith("http") ? src : `${API}${src || ""}`);
+ const safeImage = (src) => {
+   if (!src) return "";
+   if (/^(https?:|blob:|data:)/i.test(src)) return src;
+   const base = (api?.defaults?.baseURL || "").replace(/\/+$/, "");
+   const path = String(src).startsWith("/") ? src : `/${src}`;
+   return `${base}${path}`;
+ };
 const stripDiacritics = (s = "") =>
   s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 const pickBrand = (p) =>
@@ -77,8 +83,8 @@ export default function Home() {
   /* ================= Fetch products ================= */
   useEffect(() => {
     const ctrl = new AbortController();
-    axios
-      .get(`${API}/api/products`, { signal: ctrl.signal })
+      api
+      .get("/api/products", { signal: ctrl.signal })
       .then((res) => setProducts(res.data || []))
       .catch((err) => {
         if (err.name !== "CanceledError") console.error("Lỗi tải sản phẩm:", err);

@@ -1,9 +1,8 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import axios from "axios";
 import Swal from "sweetalert2";
 import "../styles/admin/ProductManagement.css";
-import ProductSpecsModal from "./ProductSpecsModal"; // ✅ modal thông số
-
+import ProductSpecsModal from "./ProductSpecsModal"; 
+import { api } from "../api/client";
 const emptyProduct = {
   TenSanPham: "", HangSanXuat: "", CauHinh: "",
   DonGia: "", SoLuongTon: "", NgayNhap: "",
@@ -12,7 +11,6 @@ const emptyProduct = {
   HinhAnhList: []
 };
 
-const API = "http://localhost:3001";
 
 export default function ProductManagement() {
   const [list, setList] = useState([]);
@@ -28,8 +26,9 @@ export default function ProductManagement() {
 
   const load = useCallback(async () => {
     try {
-      const url = search ? `${API}/api/products?search=${encodeURIComponent(search)}` : `${API}/api/products`;
-      const res = await axios.get(url);
+       const res = await api.get(
+       search ? `/api/products?search=${encodeURIComponent(search)}` : `/api/products`
+     );
       setList(res.data || []);
     } catch (err) {
       console.error("Load products error:", err);
@@ -68,9 +67,9 @@ export default function ProductManagement() {
 
     try {
       if (isEdit) {
-        await axios.put(`${API}/api/products/${editingId}`, payload);
+        await api.put(`/api/products/${editingId}`, payload);
       } else {
-        await axios.post(`${API}/api/products`, payload);
+         await api.post(`/api/products`, payload);
       }
 
       Swal.fire({
@@ -134,7 +133,7 @@ export default function ProductManagement() {
     if (!result.isConfirmed) return;
 
     try {
-      await axios.delete(`${API}/api/products/${id}`);
+       await api.delete(`/api/products/${id}`);
       await load();
       Swal.fire({ icon: "success", title: "Đã xóa", timer: 1000, showConfirmButton: false });
     } catch (err) {
@@ -176,9 +175,7 @@ export default function ProductManagement() {
       for (const file of files) {
         const fd = new FormData();
         fd.append("file", file);
-        const res = await axios.post(`${API}/api/upload`, fd, {
-          headers: { "Content-Type": "multipart/form-data" }
-        });
+       const res = await api.post(`/api/upload`, fd, { headers:{ "Content-Type":"multipart/form-data"}});
         uploadedPaths.push(res.data?.path);
       }
       setForm(f => ({ ...f, HinhAnhList: [...(f.HinhAnhList || []), ...uploadedPaths] }));
@@ -204,7 +201,10 @@ export default function ProductManagement() {
     setForm(f => ({ ...f, HinhAnhList: f.HinhAnhList.filter((_, i) => i !== idx) }));
   };
 
-  const imgUrl = (src) => (src?.startsWith("http") ? src : `${API}${src}`);
+  const imgUrl = (src) =>
+  src?.startsWith("http")
+    ? src
+    : `${(api.defaults.baseURL || "").replace(/\/$/, "")}${src}`;
 
   // ✅ mở modal Thông số
   const openSpecs = (p) => {

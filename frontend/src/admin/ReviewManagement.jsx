@@ -1,9 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import { useSearchParams, useParams } from "react-router-dom";
 import "../styles/admin/ReviewManagement.css";
+import { api } from "../api/client";
 
-const API = "http://localhost:3001";
 
 export default function ReviewManagement({ productId: productIdProp }) {
   const params = useParams();
@@ -33,10 +32,10 @@ export default function ReviewManagement({ productId: productIdProp }) {
     setLoading(true);
     try {
       const [p, rv, cm] = await Promise.all([
-        axios.get(`${API}/api/products/${productId}`),
-        axios.get(`${API}/api/reviews?productId=${productId}`),
-        axios.get(`${API}/api/comments?productId=${productId}`),
-      ]);
+   api.get(`/api/products/${productId}`),
+   api.get(`/api/reviews`, { params: { productId } }),
+   api.get(`/api/comments`, { params: { productId } }),
+ ]);
       setProduct(p.data || null);
       setReviews(rv.data || []);
       setComments(cm.data || []);
@@ -55,7 +54,7 @@ export default function ReviewManagement({ productId: productIdProp }) {
   const approveReview = async (id, approved) => {
     setModerating(true);
     try {
-      await axios.put(`${API}/api/reviews/${id}/approve`, { approved });
+       await api.put(`/api/reviews/${id}/approve`, { approved });
       await loadData();
     } catch (e) {
       console.error(e);
@@ -69,7 +68,7 @@ export default function ReviewManagement({ productId: productIdProp }) {
     if (!window.confirm("Xoá đánh giá này?")) return;
     setModerating(true);
     try {
-      await axios.delete(`${API}/api/reviews/${id}`);
+      await api.delete(`/api/reviews/${id}`);
       await loadData();
     } catch (e) {
       console.error(e);
@@ -83,7 +82,7 @@ export default function ReviewManagement({ productId: productIdProp }) {
     if (!window.confirm("Xoá bình luận này?")) return;
     setModerating(true);
     try {
-      await axios.delete(`${API}/api/comments/${id}`);
+      await api.delete(`/api/comments/${id}`);
       await loadData();
     } catch (e) {
       console.error(e);

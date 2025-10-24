@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Swal from "sweetalert2";
 import "../styles/admin/AdminHeader.css";
+import { api } from "../api/client";
 
-const API = "http://localhost:3001";
+
 const LS_LAST_SEEN_KEY = "admin_last_seen_order_marker";
 
 /** Thuần: chuẩn hoá dữ liệu đơn hàng */
@@ -62,9 +63,9 @@ export default function AdminHeader({ onToggleSidebar, sidebarOpen }) {
   /** Fetch đơn gần đây (ổn định tham chiếu) */
   const fetchRecent = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/admin/orders/recent?limit=5`, { credentials: "include" });
+      const res = await api.get("/api/admin/orders/recent", { params: { limit: 5 } });
       if (res.ok) {
-        const raw = await res.json();
+        const raw = Array.isArray(res.data) ? res.data : [];
         const list = normalizeOrders(raw);
         setRecentOrders(list);
 
@@ -75,9 +76,9 @@ export default function AdminHeader({ onToggleSidebar, sidebarOpen }) {
         return;
       }
       // fallback: nếu chưa có endpoint recent -> dùng số đơn chờ
-      const waitRes = await fetch(`${API}/api/admin/thongke/doncho`);
+       const waitRes = await api.get("/api/admin/thongke/doncho");
       if (waitRes.ok) {
-        const j = await waitRes.json();
+        const j = waitRes.data;
         const waiting = Number(j?.DonHangChoXacNhan || 0);
         setRecentOrders([]);
         setHasNew(waiting > 0);

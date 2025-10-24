@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import "../styles/admin/Profile.css";
 
-const API = "http://localhost:3001";
+import { api } from "../api/client";
 
 export default function Profile() {
   const [me, setMe] = useState({
@@ -20,7 +19,7 @@ export default function Profile() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await axios.get(`${API}/api/admin/me`, { withCredentials: true });
+         const res = await api.get("/api/admin/me", { withCredentials: true });
         const u = res.data || {};
         setMe({
           username: u.username || u.TenDangNhap || "",
@@ -49,8 +48,7 @@ export default function Profile() {
     setSaving(true);
     try {
       // 1) cập nhật thông tin text
-      await axios.put(
-        `${API}/api/admin/me`,
+      await api.put("/api/admin/me",
         {
           username: me.username,
           fullName: me.fullName,
@@ -65,7 +63,7 @@ export default function Profile() {
       if (file) {
         const fd = new FormData();
         fd.append("avatar", file);
-        await axios.post(`${API}/api/admin/me/avatar`, fd, {
+        await api.post("/api/admin/me/avatar", fd, {
           headers: { "Content-Type": "multipart/form-data" },
           withCredentials: true,
         });
@@ -85,7 +83,7 @@ export default function Profile() {
         <div className="avatar-col">
           <div className="avatar">
             {me.avatarUrl ? (
-              <img src={me.avatarUrl} alt="avatar" />
+              <img src={`${(api.defaults.baseURL || "").replace(/\/$/, "")}${me.avatarUrl}`} alt="avatar" />
             ) : (
               <i className="bx bx-user" />
             )}

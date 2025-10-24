@@ -1,13 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, Legend
 } from "recharts";
 import { useNavigate } from "react-router-dom";
 import "../styles/admin/AdminHome.css";
+import { api } from "../api/client";
 
-const API = "http://localhost:3001";
 
 export default function AdminHome() {
   const navigate = useNavigate();
@@ -45,7 +44,7 @@ export default function AdminHome() {
     (async () => {
       try {
         // Doanh thu theo tháng
-        const rev = await axios.get(`${API}/api/admin/thongke/doanhthu`);
+        const rev = await api.get(`/api/admin/thongke/doanhthu`);
         const rdata = (rev.data || []).map(r => ({
           month: r.Thang,
           revenue: Number(r.DoanhThu || 0)
@@ -54,16 +53,16 @@ export default function AdminHome() {
         const totalRevenue12M = rdata.reduce((s, i) => s + i.revenue, 0);
 
         // Số tài khoản theo vai trò
-        const acc = await axios.get(`${API}/api/admin/thongke/taikhoan`);
+        const acc = await api.get(`/api/admin/thongke/taikhoan`);
         const totalUsers = acc.data?.find(x => x.VaiTro === "KhachHang")?.SoLuong || 0;
         const totalStaff = acc.data?.find(x => x.VaiTro === "NhanVien")?.SoLuong || 0;
 
         // Đơn chờ
-        const wait = await axios.get(`${API}/api/admin/thongke/doncho`);
+        const wait = await api.get(`/api/admin/thongke/doncho`);
         const waitingOrders = Number(wait.data?.DonHangChoXacNhan || 0);
 
         // Sản phẩm (để vẽ pie)
-        const productsRes = await axios.get(`${API}/api/products`);
+        const productsRes = await api.get(`/api/products`);
         const prodList = (productsRes.data || []);
         const totalProducts = prodList.length;
         setProducts(prodList);

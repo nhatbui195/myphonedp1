@@ -1,14 +1,18 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import "../styles/pages/BackToSchool.css";
 import BreadcrumbBar from "../components/BreadcrumbBar";
-
-const API = "http://localhost:3001";
+import { api } from "../api/client";
 void motion;
 /* ============== Helpers ============== */
-const safeImage = (src) => (src && src.startsWith("http") ? src : `${API}${src || ""}`);
+const baseURL = api?.defaults?.baseURL?.replace(/\/+$/, "") || "";
+ const safeImage = (src) => {
+   if (!src) return "";
+   if (/^(https?:|blob:|data:)/i.test(src)) return src;
+   const path = String(src).startsWith("/") ? src : `/${src}`;
+   return `${baseURL}${path}`;
+ };
 const getId = (p) => p?.MaSanPham ?? p?.id ?? p?.ID ?? String(Math.random());
 const getPrice = (p) => Number(p?.DonGia ?? p?.GiaBan ?? 0) || 0;
 const nameOf = (p) => String(p?.TenSanPham || p?.name || "");
@@ -82,7 +86,7 @@ export default function BackToSchool() {
   /* ============== Fetch products ============== */
   useEffect(() => {
     const ctrl = new AbortController();
-    axios.get(`${API}/api/products`, { signal: ctrl.signal })
+    api.get("/api/products", { signal: ctrl.signal })
       .then((res) => setData(res.data || []))
       .catch(() => {});
     return () => ctrl.abort();
