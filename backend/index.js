@@ -7,6 +7,7 @@ const mysql = require('mysql2');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
+const bcrypt = require('bcryptjs');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -94,8 +95,7 @@ app.get('/api/health-db', async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
-// chặn favicon nếu có ai mở thẳng domain API
-app.get('/favicon.ico', (req, res) => res.status(204).end());
+app.get('/favicon.ico', (req, res) => res.status(204).end()); 
 // ───────────────────────────────────────────────────────────────────────────────
 
 /* ================================
