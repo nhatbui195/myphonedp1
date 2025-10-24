@@ -1,69 +1,101 @@
-// ── Phần đầu index.js (sạch, thay thế trực tiếp) ──────────────────────────────
+if (!process.env.VERCEL) {
+  try { require('dotenv').config(); } catch {}
+}
+
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
-const bcrypt = require('bcryptjs');
-const cron = require('node-cron');
-
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
-const whitelist = [
+/* ===== CORS (1 lần) ===== */
+const WHITELIST = [
   'http://localhost:5173',
-  'https://myphonedp1.vercel.app/',
+  'https://myphonedp1.vercel.app',
 ];
 const isAllowedOrigin = (origin) => {
-  if (!origin) return true;
-  if (whitelist.includes(origin)) return true;
-  try { const u = new URL(origin); if (u.hostname.endsWith('.vercel.app')) return true; } catch {}
+  if (!origin) return true; // Postman/cURL
+  if (WHITELIST.includes(origin)) return true;
+  try {
+    const u = new URL(origin);
+    // Cho phép preview *.vercel.app
+    if (u.hostname.endsWith('.vercel.app')) return true;
+  } catch {}
   return false;
 };
-app.use(cors({ origin(o, cb){ isAllowedOrigin(o) ? cb(null,true) : cb(new Error('Not allowed by CORS')); }, credentials:true }));
-
-const corsOptions = {
-  origin(origin, cb) {
-    return isAllowedOrigin(origin) ? cb(null, true) : cb(new Error('Not allowed by CORS'));
-  },
+app.use(cors({
+  origin(origin, cb) { isAllowedOrigin(origin) ? cb(null, true) : cb(new Error('Not allowed by CORS')); },
   credentials: true,
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-};
-app.use(cors({ origin(o, cb){ isAllowedOrigin(o) ? cb(null,true) : cb(new Error('Not allowed by CORS')); }, credentials:true }));
-
-
-app.use(cors(corsOptions));
+}));
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-/* ===== MySQL Connection ===== */
-const db = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: '',            // chỉnh nếu cần
-  database: 'shopdienthoai'
+/* ===== Static (local only) ===== */
+// Trên Vercel disk không bền; chỉ phục vụ khi chạy local
+if (!process.env.VERCEL) {
+  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+}
+
+/* ===== MySQL Connection (POOL + ENV) ===== */
+/* Hỗ trợ cả:
+   - DB_HOST/DB_PORT/DB_USER/DB_PASS/DB_NAME
+   - MYSQL_PUBLIC_URL
+   - MYSQLHOST, MYSQLPORT, MYSQLUSER, MYSQLPASSWORD, MYSQLDATABASE (tên từ Railway)
+*/
+try {
+  if (process.env.MYSQL_PUBLIC_URL && !process.env.DB_HOST) {
+    const u = new URL(process.env.MYSQL_PUBLIC_URL);
+    process.env.DB_HOST = process.env.DB_HOST || u.hostname;
+    process.env.DB_PORT = process.env.DB_PORT || (u.port || '3306');
+    process.env.DB_USER = process.env.DB_USER || decodeURIComponent(u.username);
+    process.env.DB_PASS = process.env.DB_PASS || decodeURIComponent(u.password);
+    process.env.DB_NAME = process.env.DB_NAME || u.pathname.replace(/^\//, '') || 'railway';
+  }
+} catch {}
+
+const db = mysql.createPool({
+  host: process.env.DB_HOST || process.env.MYSQLHOST,
+  port: Number(process.env.DB_PORT || process.env.MYSQLPORT || 3306),
+  user: process.env.DB_USER || process.env.MYSQLUSER || 'root',
+  password: process.env.DB_PASS || process.env.MYSQLPASSWORD || process.env.MYSQL_ROOT_PASSWORD || '',
+  database: process.env.DB_NAME || process.env.MYSQLDATABASE || process.env.MYSQL_DATABASE || 'shopdienthoai',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  // SSL: chỉ bật nếu nhà cung cấp yêu cầu (PlanetScale)
+  ssl: process.env.DB_SSL === '1' ? { rejectUnauthorized: true } : undefined,
 });
 const dbp = db.promise();
 
-
-db.connect(err => {
-  if (err) {
-    console.error('❌ Không thể kết nối DB:', err);
-    process.exit(1);
-  }
-  console.log('✅ Đã kết nối MySQL');
-});
-
-/* ===== Multer setup ===== */
+/* ===== Multer (serverless-safe) ===== */
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads'),
+  destination: (req, file, cb) => {
+    // Vercel: dùng /tmp; Local: dùng ./uploads
+    const dest = process.env.VERCEL ? '/tmp' : path.join(__dirname, 'uploads');
+    cb(null, dest);
+  },
   filename: (req, file, cb) => {
-    const uniqueName = Date.now() + path.extname(file.originalname);
+    const uniqueName = Date.now() + '-' + Math.random().toString(36).slice(2) + path.extname(file.originalname);
     cb(null, uniqueName);
   }
 });
 const upload = multer({ storage });
+
+/* ===== Health & tiện ích ===== */
+app.get('/api/health', (req, res) => res.json({ ok: true }));
+app.get('/api/health-db', async (req, res) => {
+  try {
+    const [r] = await dbp.query('SELECT 1 AS ok');
+    res.json(r[0]);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+// chặn favicon nếu có ai mở thẳng domain API
+app.get('/favicon.ico', (req, res) => res.status(204).end());
 // ───────────────────────────────────────────────────────────────────────────────
 
 /* ================================
@@ -1219,12 +1251,9 @@ app.put('/api/products/:id/extended', (req, res) => {
 
 
 
-
 if (!process.env.VERCEL) {
-  const PORT = process.env.PORT || 3001;
-  app.listen(PORT, () => console.log('API local http://localhost:' + PORT));
+  app.listen(PORT, () => console.log(`API local http://localhost:${PORT}`));
 }
 module.exports = app;
-
 
 // Backend (index.js)
